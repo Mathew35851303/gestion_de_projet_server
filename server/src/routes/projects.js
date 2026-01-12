@@ -48,6 +48,7 @@ router.get('/', authenticate, (req, res) => {
     startDate: project.start_date || project.created_at,
     endDate: project.end_date,
     coverImage: project.cover_image,
+    icon: project.icon,
     createdAt: project.created_at,
     members: getMembers.all(project.id).map(m => m.id),
   }));
@@ -98,6 +99,7 @@ router.get('/:id', authenticate, (req, res) => {
     startDate: project.start_date || project.created_at,
     endDate: project.end_date,
     coverImage: project.cover_image,
+    icon: project.icon,
     members: members,
   });
 });
@@ -107,7 +109,7 @@ router.get('/:id', authenticate, (req, res) => {
  * Créer un nouveau projet (admin seulement)
  */
 router.post('/', authenticate, requireAdmin, (req, res) => {
-  const { name, description, coverImage, status = 'active', startDate, endDate, members = [] } = req.body;
+  const { name, description, coverImage, icon, status = 'active', startDate, endDate, members = [] } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'Nom du projet requis' });
@@ -116,9 +118,9 @@ router.post('/', authenticate, requireAdmin, (req, res) => {
   const id = uuidv4();
 
   db.prepare(`
-    INSERT INTO projects (id, name, description, created_by, cover_image, status, start_date, end_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, name, description, req.user.id, coverImage, status, startDate || new Date().toISOString(), endDate);
+    INSERT INTO projects (id, name, description, created_by, cover_image, icon, status, start_date, end_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, name, description, req.user.id, coverImage, icon, status, startDate || new Date().toISOString(), endDate);
 
   // Ajouter le créateur et les membres
   const insertMember = db.prepare(`
@@ -141,6 +143,7 @@ router.post('/', authenticate, requireAdmin, (req, res) => {
     description: project.description,
     status: project.status,
     coverImage: project.cover_image,
+    icon: project.icon,
   });
 });
 
@@ -150,7 +153,7 @@ router.post('/', authenticate, requireAdmin, (req, res) => {
  */
 router.put('/:id', authenticate, requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { name, description, coverImage, status, startDate, endDate, members } = req.body;
+  const { name, description, coverImage, icon, status, startDate, endDate, members } = req.body;
 
   const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
   if (!project) {
@@ -162,12 +165,13 @@ router.put('/:id', authenticate, requireAdmin, (req, res) => {
     SET name = COALESCE(?, name),
         description = COALESCE(?, description),
         cover_image = COALESCE(?, cover_image),
+        icon = COALESCE(?, icon),
         status = COALESCE(?, status),
         start_date = COALESCE(?, start_date),
         end_date = COALESCE(?, end_date),
         updated_at = datetime('now')
     WHERE id = ?
-  `).run(name, description, coverImage, status, startDate, endDate, id);
+  `).run(name, description, coverImage, icon, status, startDate, endDate, id);
 
   // Mettre à jour les membres si fournis
   if (members) {
@@ -191,6 +195,7 @@ router.put('/:id', authenticate, requireAdmin, (req, res) => {
     description: updatedProject.description,
     status: updatedProject.status,
     coverImage: updatedProject.cover_image,
+    icon: updatedProject.icon,
   });
 });
 

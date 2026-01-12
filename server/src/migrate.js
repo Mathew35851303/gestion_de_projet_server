@@ -39,6 +39,11 @@ if (!projectColumns.includes('end_date')) {
   db.exec('ALTER TABLE projects ADD COLUMN end_date TEXT');
 }
 
+if (!projectColumns.includes('icon')) {
+  console.log('Ajout de la colonne icon a projects...');
+  db.exec('ALTER TABLE projects ADD COLUMN icon TEXT');
+}
+
 // Verifier que la colonne avatar existe pour users (devrait deja exister)
 const userColumns = db.pragma('table_info(users)').map(col => col.name);
 
