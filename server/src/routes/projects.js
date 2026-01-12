@@ -41,8 +41,15 @@ router.get('/', authenticate, (req, res) => {
   `);
 
   const result = projects.map(project => ({
-    ...project,
-    members: getMembers.all(project.id),
+    id: project.id,
+    name: project.name,
+    description: project.description,
+    status: project.status || 'active',
+    startDate: project.start_date || project.created_at,
+    endDate: project.end_date,
+    coverImage: project.cover_image,
+    createdAt: project.created_at,
+    members: getMembers.all(project.id).map(m => m.id),
   }));
 
   res.json(result);
@@ -77,13 +84,22 @@ router.get('/:id', authenticate, (req, res) => {
 
   // Récupérer les membres
   const members = db.prepare(`
-    SELECT u.id, u.name, u.email, u.color, u.avatar
+    SELECT u.id, u.name, u.email, u.role, u.color, u.avatar
     FROM users u
     INNER JOIN project_members pm ON u.id = pm.user_id
     WHERE pm.project_id = ?
   `).all(project.id);
 
-  res.json({ ...project, members });
+  res.json({
+    id: project.id,
+    name: project.name,
+    description: project.description,
+    status: project.status || 'active',
+    startDate: project.start_date || project.created_at,
+    endDate: project.end_date,
+    coverImage: project.cover_image,
+    members: members,
+  });
 });
 
 /**
@@ -91,7 +107,7 @@ router.get('/:id', authenticate, (req, res) => {
  * Créer un nouveau projet (admin seulement)
  */
 router.post('/', authenticate, requireAdmin, (req, res) => {
-  const { name, description, color = '#3b82f6', members = [] } = req.body;
+  const { name, description, coverImage, status = 'active', startDate, endDate, members = [] } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'Nom du projet requis' });
@@ -100,9 +116,9 @@ router.post('/', authenticate, requireAdmin, (req, res) => {
   const id = uuidv4();
 
   db.prepare(`
-    INSERT INTO projects (id, name, description, created_by, color)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(id, name, description, req.user.id, color);
+    INSERT INTO projects (id, name, description, created_by, cover_image, status, start_date, end_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, name, description, req.user.id, coverImage, status, startDate || new Date().toISOString(), endDate);
 
   // Ajouter le créateur et les membres
   const insertMember = db.prepare(`
@@ -118,14 +134,14 @@ router.post('/', authenticate, requireAdmin, (req, res) => {
   });
 
   const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
-  const projectMembers = db.prepare(`
-    SELECT u.id, u.name, u.email, u.color
-    FROM users u
-    INNER JOIN project_members pm ON u.id = pm.user_id
-    WHERE pm.project_id = ?
-  `).all(id);
 
-  res.status(201).json({ ...project, members: projectMembers });
+  res.status(201).json({
+    id: project.id,
+    name: project.name,
+    description: project.description,
+    status: project.status,
+    coverImage: project.cover_image,
+  });
 });
 
 /**
@@ -134,7 +150,7 @@ router.post('/', authenticate, requireAdmin, (req, res) => {
  */
 router.put('/:id', authenticate, requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { name, description, color, members } = req.body;
+  const { name, description, coverImage, status, startDate, endDate, members } = req.body;
 
   const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
   if (!project) {
@@ -145,10 +161,13 @@ router.put('/:id', authenticate, requireAdmin, (req, res) => {
     UPDATE projects
     SET name = COALESCE(?, name),
         description = COALESCE(?, description),
-        color = COALESCE(?, color),
+        cover_image = COALESCE(?, cover_image),
+        status = COALESCE(?, status),
+        start_date = COALESCE(?, start_date),
+        end_date = COALESCE(?, end_date),
         updated_at = datetime('now')
     WHERE id = ?
-  `).run(name, description, color, id);
+  `).run(name, description, coverImage, status, startDate, endDate, id);
 
   // Mettre à jour les membres si fournis
   if (members) {
@@ -165,14 +184,14 @@ router.put('/:id', authenticate, requireAdmin, (req, res) => {
   }
 
   const updatedProject = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
-  const projectMembers = db.prepare(`
-    SELECT u.id, u.name, u.email, u.color
-    FROM users u
-    INNER JOIN project_members pm ON u.id = pm.user_id
-    WHERE pm.project_id = ?
-  `).all(id);
 
-  res.json({ ...updatedProject, members: projectMembers });
+  res.json({
+    id: updatedProject.id,
+    name: updatedProject.name,
+    description: updatedProject.description,
+    status: updatedProject.status,
+    coverImage: updatedProject.cover_image,
+  });
 });
 
 /**

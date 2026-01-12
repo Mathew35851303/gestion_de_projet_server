@@ -82,7 +82,10 @@ router.post('/', authenticate, upload.single('file'), (req, res) => {
 
   // Construire l'URL du fichier
   const relativePath = path.relative(uploadsDir, req.file.path).replace(/\\/g, '/');
-  const fileUrl = `/uploads/${relativePath}`;
+
+  // Utiliser l'URL de base si configurée, sinon URL relative
+  const baseUrl = process.env.BASE_URL || '';
+  const fileUrl = `${baseUrl}/uploads/${relativePath}`;
 
   res.json({
     url: fileUrl,
@@ -102,10 +105,11 @@ router.post('/multiple', authenticate, upload.array('files', 10), (req, res) => 
     return res.status(400).json({ error: 'Aucun fichier fourni' });
   }
 
+  const baseUrl = process.env.BASE_URL || '';
   const files = req.files.map(file => {
     const relativePath = path.relative(uploadsDir, file.path).replace(/\\/g, '/');
     return {
-      url: `/uploads/${relativePath}`,
+      url: `${baseUrl}/uploads/${relativePath}`,
       filename: file.filename,
       originalName: file.originalname,
       mimetype: file.mimetype,

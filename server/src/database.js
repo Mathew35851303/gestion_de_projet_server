@@ -38,6 +38,10 @@ db.exec(`
     description TEXT,
     created_by TEXT NOT NULL,
     color TEXT DEFAULT '#3b82f6',
+    cover_image TEXT,
+    status TEXT DEFAULT 'active' CHECK(status IN ('active', 'on-hold', 'completed')),
+    start_date TEXT DEFAULT (datetime('now')),
+    end_date TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (created_by) REFERENCES users(id)

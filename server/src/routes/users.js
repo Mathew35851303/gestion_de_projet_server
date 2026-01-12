@@ -89,7 +89,7 @@ router.post('/', authenticate, requireAdmin, (req, res) => {
  */
 router.put('/:id', authenticate, (req, res) => {
   const { id } = req.params;
-  const { email, name, role, color, allowedPages, password } = req.body;
+  const { email, name, role, color, avatar, allowedPages, password } = req.body;
 
   // Vérifier les permissions
   if (req.user.role !== 'admin' && req.user.id !== id) {
@@ -101,13 +101,16 @@ router.put('/:id', authenticate, (req, res) => {
     return res.status(404).json({ error: 'Utilisateur non trouvé' });
   }
 
-  // Les non-admins ne peuvent modifier que leur nom et couleur
+  // Les non-admins ne peuvent modifier que leur nom, couleur et avatar
   if (req.user.role !== 'admin') {
     db.prepare(`
       UPDATE users
-      SET name = COALESCE(?, name), color = COALESCE(?, color), updated_at = datetime('now')
+      SET name = COALESCE(?, name),
+          color = COALESCE(?, color),
+          avatar = COALESCE(?, avatar),
+          updated_at = datetime('now')
       WHERE id = ?
-    `).run(name, color, id);
+    `).run(name, color, avatar, id);
   } else {
     // Vérifier si l'email est déjà utilisé par quelqu'un d'autre
     if (email && email !== user.email) {
@@ -123,6 +126,7 @@ router.put('/:id', authenticate, (req, res) => {
           name = COALESCE(?, name),
           role = COALESCE(?, role),
           color = COALESCE(?, color),
+          avatar = COALESCE(?, avatar),
           allowed_pages = COALESCE(?, allowed_pages),
           updated_at = datetime('now')
     `;
@@ -131,6 +135,7 @@ router.put('/:id', authenticate, (req, res) => {
       name,
       role,
       color,
+      avatar,
       allowedPages ? JSON.stringify(allowedPages) : null,
     ];
 
@@ -152,7 +157,11 @@ router.put('/:id', authenticate, (req, res) => {
   `).get(id);
 
   res.json({
-    ...updatedUser,
+    id: updatedUser.id,
+    email: updatedUser.email,
+    name: updatedUser.name,
+    role: updatedUser.role,
+    avatar: updatedUser.avatar,
     allowedPages: updatedUser.allowed_pages ? JSON.parse(updatedUser.allowed_pages) : [],
     mustChangePassword: updatedUser.must_change_password === 1,
   });
