@@ -27,8 +27,10 @@ if (!projectColumns.includes('status')) {
 
 if (!projectColumns.includes('start_date')) {
   console.log('Ajout de la colonne start_date a projects...');
-  db.exec("ALTER TABLE projects ADD COLUMN start_date TEXT DEFAULT (datetime('now'))");
+  // SQLite ne permet pas datetime('now') comme default dans ALTER TABLE
+  db.exec('ALTER TABLE projects ADD COLUMN start_date TEXT');
   // Mettre a jour les projets existants avec created_at
+  console.log('Mise a jour des projets existants...');
   db.exec('UPDATE projects SET start_date = created_at WHERE start_date IS NULL');
 }
 
